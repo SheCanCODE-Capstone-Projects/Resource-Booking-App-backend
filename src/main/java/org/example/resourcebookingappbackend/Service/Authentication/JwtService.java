@@ -1,4 +1,4 @@
-package org.example.resourcebookingappbackend.Service;
+package org.example.resourcebookingappbackend.Service.Authentication;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -29,7 +29,7 @@ public class JwtService {
                 .claims(claims)
                 .subject(username)
                 .issuedAt(new Date())
-                .expiration(new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 90))
+                .expiration(new Date(System.currentTimeMillis()+ (1000L * 60 * 60 * 24 * 90)))
                 .signWith(Keys.hmacShaKeyFor(secretKey.getBytes()))
                 .compact();
 
@@ -39,7 +39,7 @@ public class JwtService {
     public String extractUsername(String token) {
         return  Jwts
                 .parser()
-                .setSigningKey(Keys.hmacShaKeyFor(secretKey.getBytes()))
+                .verifyWith(Keys.hmacShaKeyFor(secretKey.getBytes()))
                 .build()
                 .parseSignedClaims(token)
                 .getBody()
@@ -49,7 +49,7 @@ public class JwtService {
     public boolean isTokenExpired(String token) {
         return  Jwts
                 .parser()
-                .setSigningKey(Keys.hmacShaKeyFor(secretKey.getBytes()))
+                .verifyWith(Keys.hmacShaKeyFor(secretKey.getBytes()))
                 .build()
                 .parseSignedClaims(token)
                 .getBody()

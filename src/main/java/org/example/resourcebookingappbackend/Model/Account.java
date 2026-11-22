@@ -20,7 +20,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class Users {
+public class Account {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(nullable = false)
@@ -40,6 +40,9 @@ public class Users {
     private Role role;
 
     private String authProvider;
+
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified;
 
     @CreationTimestamp
     private Timestamp createdAt;

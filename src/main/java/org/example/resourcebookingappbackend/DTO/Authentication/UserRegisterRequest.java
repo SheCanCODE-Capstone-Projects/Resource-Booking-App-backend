@@ -1,12 +1,9 @@
-package org.example.resourcebookingappbackend.DTO;
+package org.example.resourcebookingappbackend.DTO.Authentication;
 
 import jakarta.persistence.Column;
 import jakarta.validation.constraints.*;
 import lombok.Data;
-import lombok.Value;
 import org.hibernate.validator.constraints.Length;
-
-import java.io.Serializable;
 
 /**
  * DTO for {@link org.example.resourcebookingappbackend.Model.Users}

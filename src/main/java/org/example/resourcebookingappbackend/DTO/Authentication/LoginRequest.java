@@ -1,7 +1,5 @@
-package org.example.resourcebookingappbackend.DTO;
+package org.example.resourcebookingappbackend.DTO.Authentication;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
 

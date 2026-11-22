@@ -5,19 +5,19 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import org.example.resourcebookingappbackend.DTO.LoginRequest;
-import org.example.resourcebookingappbackend.DTO.LoginResponse;
-import org.example.resourcebookingappbackend.DTO.UserRegisterRequest;
-import org.example.resourcebookingappbackend.DTO.UserRegisterResponse;
-import org.example.resourcebookingappbackend.Service.AuthService;
+import org.example.resourcebookingappbackend.DTO.Authentication.*;
+import org.example.resourcebookingappbackend.Service.Authentication.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -95,9 +95,142 @@ public class AuthController {
     public void googleLogin(HttpServletResponse response)
             throws IOException {
 
-        response.sendRedirect("oauth2/authorization/google");
+        response.sendRedirect("/oauth2/authorization/google");
     }
 
-//    @PatchMapping
-//    public ResponseEntity<UserRegisterResponse> updateProfile(@Valid @RequestBody UserRegisterRequest registerRequest) {}
+
+    @PostMapping("/verify-email")
+    @Operation(
+            summary = "Verify user email",
+            description = "Verifies the registered email using a six-digit OTP."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Email verified successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid or expired OTP")
+    })
+    public ResponseEntity<Map<String, String>> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        boolean verified = authService.verifyEmailResult(request);
+
+        if (!verified) {
+            return ResponseEntity.badRequest().body(
+                    Map.of(
+                            "message",
+                            "Invalid or expired OTP"
+                    )
+            );
+        }
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "message",
+                        "Email verified. You may now log in."
+                )
+        );
+    }
+
+
+    @PostMapping("/resend-verification")
+    @Operation(
+            summary = "Resend verification OTP",
+            description =
+                    """
+                    this endpoint is going to be accessed in this case:.
+                            - The user registered but did not receive the OTP email.
+                            - The OTP expired after 10 minutes
+                            - The user deleted or lost the previous OTP
+                            - The user entered the wrong OTP too many times (5 failed attempts).
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Verification request processed"),
+            @ApiResponse(responseCode = "400", description = "Invalid request"),
+            @ApiResponse(responseCode = "503", description = "Email service unavailable")
+    })
+    public ResponseEntity<Map<String, String>> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+        authService.resendVerification(request);
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "message",
+                        "If eligible, a verification code has been sent."
+                )
+        );
+    }
+
+
+    @PostMapping("/forgot-password")
+    @Operation(
+            summary = "Request password reset",
+            description = "Sends a password recovery OTP to the registered email."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Password recovery request processed"),
+            @ApiResponse(responseCode = "400", description = "Invalid email address"),
+            @ApiResponse(responseCode = "503", description = "Email service unavailable")
+    })
+    public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "message",
+                        "If eligible, a recovery code has been sent."
+                )
+        );
+    }
+
+
+    @PostMapping("/reset-password")
+    @Operation(
+            summary = "Reset password",
+            description = "Resets the  forgotten user's password using a valid email OTP and a new password."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Password reset successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid or expired OTP")
+    })
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        boolean success = authService.resetPassword(request);
+
+        if (!success) {
+            return ResponseEntity.badRequest().body(
+                    Map.of(
+                            "message",
+                            "Invalid or expired OTP"
+                    )
+            );
+        }
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "message",
+                        "Password reset successfully."
+                )
+        );
+    }
+
+
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/change-password")
+    @Operation(
+            summary = "Change password",
+            description = "Allows an authenticated user to change their password using the current and new passwords.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Password changed successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid password details"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    public ResponseEntity<Map<String, String>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(request);
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "message",
+                        "Password changed successfully."
+                )
+        );
+    }
 }

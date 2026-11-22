@@ -1,4 +1,4 @@
-package org.example.resourcebookingappbackend.DTO;
+package org.example.resourcebookingappbackend.DTO.Authentication;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

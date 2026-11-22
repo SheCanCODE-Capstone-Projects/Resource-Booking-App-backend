@@ -1,12 +1,12 @@
 package org.example.resourcebookingappbackend.Configuration;
 
-import org.example.resourcebookingappbackend.Service.CustomOAuthLoginService;
-import org.example.resourcebookingappbackend.Service.JwtAuthenticationFilter;
+import org.example.resourcebookingappbackend.Service.Authentication.CustomOauthUserDetail;
+import org.example.resourcebookingappbackend.Service.Authentication.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -17,13 +17,14 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private JwtAuthenticationFilter jwtFilter;
-    private CustomOAuthLoginService customOAuthLoginService;
+    private CustomOauthUserDetail CustomOauthUserDetail;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtFilter , CustomOAuthLoginService customOAuthLoginService) {
-        this.customOAuthLoginService = customOAuthLoginService;
+    public SecurityConfig(JwtAuthenticationFilter jwtFilter , CustomOauthUserDetail CustomOauthUserDetail) {
+        this.CustomOauthUserDetail = CustomOauthUserDetail;
         this.jwtFilter = jwtFilter;
     }
 
@@ -40,10 +41,14 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/oauth2/**",
                                 "/login/oauth2/**"
-                                ).permitAll())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                ).permitAll()
+                        .requestMatchers("/api/auth/change-password").authenticated()
+                        .anyRequest().authenticated()
+                )
+
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .oauth2Login(oAuthLogin ->oAuthLogin
-                        .userInfoEndpoint(userInfo-> userInfo.userService(customOAuthLoginService))
+                        .userInfoEndpoint(userInfo-> userInfo.userService(CustomOauthUserDetail))
                         .defaultSuccessUrl("/swagger-ui/index.html", true)
                 )
 
