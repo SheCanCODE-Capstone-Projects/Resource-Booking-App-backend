@@ -50,7 +50,7 @@ public class OpenApiConfig {
                 )
                 .addServersItem(
                         new Server()
-                                .url("https://ai-powered-system-design-architecture-assistant-production.up.railway.app")
+                                .url("https://resource-booking-app-backend-production.up.railway.app/")
                                 .description("Deployed SpaceSync Server")
                 );
 
