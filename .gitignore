@@ -32,5 +32,4 @@ build/
 ### VS Code ###
 node_modules
 
-.env
-.vscode/
+config.bat

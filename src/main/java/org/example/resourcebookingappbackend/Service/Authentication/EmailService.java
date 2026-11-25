@@ -180,6 +180,127 @@ public class EmailService {
     }
 
     /**
+     * Sends a plain, pre-composed email through Brevo (e.g. role-request status
+     * updates). Does not touch the OTP flow above.
+     *
+     * @param recipientEmail recipient's email address
+     * @param subject        email subject
+     * @param textContent    email body
+     */
+    public void sendPlainEmail(String recipientEmail, String subject, String textContent) {
+
+        try {
+
+            Map<String, Object> payload = Map.of(
+
+                    "sender", Map.of(
+                            "name", senderName,
+                            "email", senderEmail
+                    ),
+
+                    "to", new Object[]{
+                            Map.of(
+                                    "email",
+                                    recipientEmail
+                            )
+                    },
+
+                    "subject", subject,
+
+                    "textContent", textContent
+            );
+
+            String jsonPayload =
+                    objectMapper.writeValueAsString(payload);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(BREVO_API_URL))
+                    .timeout(Duration.ofSeconds(15))
+                    .header("api-key", apiKey)
+                    .header(
+                            "Content-Type",
+                            "application/json"
+                    )
+                    .header(
+                            "Accept",
+                            "application/json"
+                    )
+                    .POST(
+                            HttpRequest.BodyPublishers.ofString(
+                                    jsonPayload,
+                                    StandardCharsets.UTF_8
+                            )
+                    )
+                    .build();
+
+            HttpResponse<String> response =
+                    httpClient.send(
+                            request,
+                            HttpResponse.BodyHandlers.ofString()
+                    );
+
+            int statusCode = response.statusCode();
+
+            if (statusCode >= 200 && statusCode < 300) {
+
+                log.info(
+                        "Brevo accepted plain email request. Status: {}",
+                        statusCode
+                );
+
+                return;
+            }
+
+            log.error(
+                    "Brevo email request failed. HTTP status: {}",
+                    statusCode
+            );
+
+            log.error(
+                    "Brevo error response: {}",
+                    sanitizeError(response.body())
+            );
+
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Unable to send email"
+            );
+
+        } catch (InterruptedException ex) {
+
+            Thread.currentThread().interrupt();
+
+            log.error(
+                    "Brevo email request interrupted",
+                    ex
+            );
+
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Email service interrupted",
+                    ex
+            );
+
+        } catch (ResponseStatusException ex) {
+
+            throw ex;
+
+        } catch (Exception ex) {
+
+            log.error(
+                    "Unexpected error while sending plain email: {}",
+                    ex.getClass().getSimpleName()
+            );
+
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Email service unavailable",
+                    ex
+            );
+        }
+    }
+
+    /**
      * Creates the email subject based on OTP purpose.
      */
     private String buildSubject(String purpose) {
