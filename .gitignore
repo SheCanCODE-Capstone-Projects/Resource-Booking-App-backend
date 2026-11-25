@@ -30,7 +30,7 @@ build/
 !**/src/test/**/build/
 
 ### VS Code ###
-config.bat
 node_modules
 
 .env
+.vscode/
