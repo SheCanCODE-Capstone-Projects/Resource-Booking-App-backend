@@ -1,7 +1,7 @@
 package org.example.resourcebookingappbackend.DTO;
 
 import org.example.resourcebookingappbackend.Model.Reservation;
-import org.example.resourcebookingappbackend.Model.ReservationStatus;
+import org.example.resourcebookingappbackend.Enum.ReservationStatus;
 
 import java.time.LocalDateTime; // type for a date and time
 

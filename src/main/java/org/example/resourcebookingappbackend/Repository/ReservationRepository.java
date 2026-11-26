@@ -1,7 +1,7 @@
 package org.example.resourcebookingappbackend.Repository;
 
 import org.example.resourcebookingappbackend.Model.Reservation;
-import org.example.resourcebookingappbackend.Model.ReservationStatus;
+import org.example.resourcebookingappbackend.Enum.ReservationStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
