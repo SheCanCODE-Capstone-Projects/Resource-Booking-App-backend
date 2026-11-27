@@ -1,128 +1,146 @@
-package org.example.resourcebookingappbackend.Controller; // folder (package) where this file lives
+package org.example.resourcebookingappbackend.Controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.example.resourcebookingappbackend.DTO.AvailabilityResponse;
-import org.example.resourcebookingappbackend.DTO.ResourceRequest;
-import org.example.resourcebookingappbackend.DTO.ResourceResponse;
-import org.example.resourcebookingappbackend.Model.ResourceCategory;
-import org.example.resourcebookingappbackend.Service.ResourceService;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.format.annotation.DateTimeFormat;
+import org.example.resourcebookingappbackend.DTO.Resource.AvailabilityResponse;
+import org.example.resourcebookingappbackend.DTO.Resource.ResourceCreateRequest;
+import org.example.resourcebookingappbackend.DTO.Resource.ResourceResponse;
+import org.example.resourcebookingappbackend.DTO.Resource.ResourceUpdateRequest;
+import org.example.resourcebookingappbackend.Service.Resource.AvailabilityService;
+import org.example.resourcebookingappbackend.Service.Resource.ResourceService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.Set;
+import java.util.List;
+import java.util.UUID;
 
-@Tag(name = "Resources", description = "Discover and manage bookable spaces and equipment")
 @RestController
 @RequestMapping("/api/resources")
-@RequiredArgsConstructor
+@Tag(
+        name = "Resources",
+        description = "Endpoints for creating, discovering, and managing reservable resources"
+)
 public class ResourceController {
 
-    private final ResourceService service;
+    private final ResourceService resourceService;
+    private final AvailabilityService availabilityService;
 
-    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("name", "capacity", "location", "category");
-
-    @Operation(summary = "List resources",
-            description = "Returns a page of active resources. All filters are optional and can be combined.")
-    @ApiResponse(responseCode = "200", description = "Page of resources returned") // what a success looks like
-    @GetMapping
-    public Page<ResourceResponse> getAll(
-            @Parameter(description = "Filter by category")
-            @RequestParam(required = false) ResourceCategory category,
-            @Parameter(description = "Filter by location (part of the name, ignores upper/lower case)", example = "Kigali")
-            @RequestParam(required = false) String location,
-            @Parameter(description = "Minimum number of people the resource must hold")
-            @RequestParam(required = false) Integer capacity,
-            @Parameter(description = "Page number, starts at 0")
-            @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Items per page (1 to 50)")
-            @RequestParam(defaultValue = "10") int size,
-            @Parameter(description = "Field to sort by",
-                    schema = @Schema(allowableValues = {"name", "capacity", "location", "category"}, defaultValue = "name"))
-            @RequestParam(defaultValue = "name") String sortBy) {
-        String sortField = ALLOWED_SORT_FIELDS.contains(sortBy) ? sortBy : "name";
-        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 50), Sort.by(sortField));
-        return service.search(category, location, capacity, pageable);
+    public ResourceController(ResourceService resourceService, AvailabilityService availabilityService) {
+        this.resourceService = resourceService;
+        this.availabilityService = availabilityService;
     }
-
-    @Operation(summary = "Get one resource", description = "Returns the details of a single active resource.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Resource found"),
-            @ApiResponse(responseCode = "404", description = "Resource not found or deleted")
-    })
-    @GetMapping("/{id}")
-    public ResourceResponse getById(
-            @Parameter(description = "Id of the resource")
-            @PathVariable Long id) {
-        return service.getById(id);
-    }
-
-    @Operation(summary = "Get availability",
-            description = "Returns the opening hours of the resource for a date, plus the time slots already booked.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Availability returned"),
-            @ApiResponse(responseCode = "400", description = "Date is missing or has a wrong format"),
-            @ApiResponse(responseCode = "404", description = "Resource not found or deleted")
-    })
-    @GetMapping("/{id}/availability")
-    public AvailabilityResponse getAvailability(
-            @Parameter(description = "Id of the resource")
-            @PathVariable Long id,
-            @Parameter(description = "Date to check, format yyyy-MM-dd")
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return service.getAvailability(id, date);
-    }
-
-
-    @Operation(summary = "Create a resource", description = "Adds a new resource. Intended for administrators only.") // endpoint description
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Resource created"),
-            @ApiResponse(responseCode = "400", description = "Invalid data, e.g. missing field or closing time before opening time") // error
-    })
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ResourceResponse create(@Valid @RequestBody ResourceRequest request) {
-        return service.create(request);
+    @PreAuthorize("hasAnyRole('ADMIN', 'PUBLISHER')")
+    @Operation(
+            summary = "Create a resource",
+            description = "Allows an administrator or publisher to create a new reservable resource such as a room, office, or piece of equipment. The creator becomes the resource's owner.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Resource created successfully",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResourceResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid resource data", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - administrator or publisher role required", content = @Content)
+    })
+    public ResponseEntity<ResourceResponse> createResource(@Valid @RequestBody ResourceCreateRequest request) {
+        return new ResponseEntity<>(resourceService.createResource(request), HttpStatus.CREATED);
     }
 
-    @Operation(summary = "Update a resource", description = "Replaces all the details of an existing resource. Intended for administrators only.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Resource updated"),
-            @ApiResponse(responseCode = "400", description = "Invalid data"),
-            @ApiResponse(responseCode = "404", description = "Resource not found or deleted")
+    @GetMapping
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "List resources",
+            description = "Retrieves resources, optionally filtered by category, location, minimum capacity, and active status. Accessible to any authenticated role.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<List<ResourceResponse>> listResources(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) Integer minCapacity,
+            @RequestParam(required = false) Boolean active
+    ) {
+        return ResponseEntity.ok(resourceService.listResources(category, location, minCapacity, active));
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "Get resource details",
+            description = "Retrieves the details of a single resource. Accessible to any authenticated role.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Resource found"),
+            @ApiResponse(responseCode = "404", description = "Resource not found", content = @Content)
     })
+    public ResponseEntity<ResourceResponse> getResource(@PathVariable UUID id) {
+        return ResponseEntity.ok(resourceService.getResource(id));
+    }
+
+    @GetMapping("/{id}/availability")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "Get resource availability",
+            description = "Returns the occupied and available time intervals for a resource on a given date, derived from confirmed reservations. Accessible to any authenticated role.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Availability computed successfully",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = AvailabilityResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Resource not found", content = @Content)
+    })
+    public ResponseEntity<AvailabilityResponse> getAvailability(
+            @PathVariable UUID id,
+            @RequestParam LocalDate date
+    ) {
+        return ResponseEntity.ok(availabilityService.getAvailability(id, date));
+    }
 
     @PutMapping("/{id}")
-    public ResourceResponse update(
-            @Parameter(description = "Id of the resource to update", example = "1")
-            @PathVariable Long id,
-            @Valid @RequestBody ResourceRequest request) {
-        return service.update(id, request);
+    @PreAuthorize("hasAnyRole('ADMIN', 'PUBLISHER')")
+    @Operation(
+            summary = "Update a resource",
+            description = "Allows the owning publisher or an administrator to update resource details.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Resource updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid resource data", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - not the resource owner or an administrator", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Resource not found", content = @Content)
+    })
+    public ResponseEntity<ResourceResponse> updateResource(
+            @PathVariable UUID id,
+            @Valid @RequestBody ResourceUpdateRequest request
+    ) {
+        return ResponseEntity.ok(resourceService.updateResource(id, request));
     }
 
-    @Operation(summary = "Delete a resource", description = "Soft delete: the resource is hidden but kept in the database. Intended for administrators only.") // endpoint description
-    @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Resource deleted"),
-            @ApiResponse(responseCode = "404", description = "Resource not found or already deleted")
-    })
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(
-            @Parameter(description = "Id of the resource to delete", example = "1")
-            @PathVariable Long id) {
-        service.delete(id);
+    @PreAuthorize("hasAnyRole('ADMIN', 'PUBLISHER')")
+    @Operation(
+            summary = "Deactivate a resource",
+            description = "Allows the owning publisher or an administrator to deactivate a resource, removing it from availability for new bookings.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Resource deactivated successfully"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - not the resource owner or an administrator", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Resource not found", content = @Content)
+    })
+    public ResponseEntity<Void> deactivateResource(@PathVariable UUID id) {
+        resourceService.deactivateResource(id);
+        return ResponseEntity.noContent().build();
     }
 }

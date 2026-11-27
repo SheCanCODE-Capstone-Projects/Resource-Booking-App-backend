@@ -28,11 +28,9 @@ public class SecurityConfig {
     private JwtAuthenticationFilter jwtFilter;
     private CustomOauthUserDetail CustomOauthUserDetail;
 
-
-    public SecurityConfig(JwtAuthenticationFilter jwtFilter , CustomOauthUserDetail CustomOauthUserDetail ) {
+    public SecurityConfig(JwtAuthenticationFilter jwtFilter , CustomOauthUserDetail CustomOauthUserDetail) {
         this.CustomOauthUserDetail = CustomOauthUserDetail;
         this.jwtFilter = jwtFilter;
-
     }
 
 
@@ -54,18 +52,17 @@ public class SecurityConfig {
                 )
 
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-                .oauth2Login(oAuthLogin -> oAuthLogin
-                        .userInfoEndpoint(userInfo ->
-                                userInfo.userService(CustomOauthUserDetail)
-                        )
+                .oauth2Login(oAuthLogin ->oAuthLogin
+                        .userInfoEndpoint(userInfo-> userInfo.userService(CustomOauthUserDetail))
                         .defaultSuccessUrl(
-                                "https://resource-booking-app-frontend.onrender.com",
+                                ".dashboard",
                                 true
                         )
                 )
                 .cors(cors ->
                         cors.configurationSource(corsConfigurationSource())
                 )
+
                 .addFilterBefore(jwtFilter , UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
@@ -83,10 +80,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
-                "https://resource-booking-app-frontend.onrender.com",
+                "https://resource-booking-app-frontend.onrender.com/",
                 "http://localhost:8081"
-
-
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));

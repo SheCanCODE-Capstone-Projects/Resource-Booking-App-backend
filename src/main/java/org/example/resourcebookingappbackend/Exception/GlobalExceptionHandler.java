@@ -3,6 +3,7 @@ package org.example.resourcebookingappbackend.Exception;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -54,8 +55,17 @@ public class GlobalExceptionHandler {
         );
     }
 
+    // 403 FORBIDDEN - Authenticated but lacking the required role/permission
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
+        return new ResponseEntity<>(
+                buildErrorBody(HttpStatus.FORBIDDEN, "You do not have permission to perform this action"),
+                HttpStatus.FORBIDDEN
+        );
+    }
+
     // 404 NOT FOUND - User or requested resource does not exist
-    @ExceptionHandler({UsernameNotFoundException.class})
+    @ExceptionHandler({UsernameNotFoundException.class, ResourceNotFoundException.class})
     public ResponseEntity<Map<String, Object>> handleNotFound(RuntimeException ex) {
         return new ResponseEntity<>(
                 buildErrorBody(HttpStatus.NOT_FOUND, ex.getMessage()),
@@ -63,9 +73,9 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // 409 CONFLICT - Account/email/username already exists
-    @ExceptionHandler(UserAlreadyExist.class)
-    public ResponseEntity<Map<String, Object>> handleUserAlreadyExist(UserAlreadyExist ex) {
+    // 409 CONFLICT - Account/email/username already exists, or an overlapping reservation
+    @ExceptionHandler({UserAlreadyExist.class, ReservationConflictException.class})
+    public ResponseEntity<Map<String, Object>> handleConflict(RuntimeException ex) {
         return new ResponseEntity<>(
                 buildErrorBody(HttpStatus.CONFLICT, ex.getMessage()),
                 HttpStatus.CONFLICT
