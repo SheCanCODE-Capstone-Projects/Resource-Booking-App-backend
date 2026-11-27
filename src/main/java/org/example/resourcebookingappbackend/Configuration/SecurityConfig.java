@@ -54,7 +54,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .oauth2Login(oAuthLogin ->oAuthLogin
                         .userInfoEndpoint(userInfo-> userInfo.userService(CustomOauthUserDetail))
-                        .defaultSuccessUrl("/swagger-ui/index.html", true)
+                        .defaultSuccessUrl("https://resource-booking-app-frontend.onrender.com/explore", true)
                 )
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
