@@ -54,7 +54,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .oauth2Login(oAuthLogin ->oAuthLogin
                         .userInfoEndpoint(userInfo-> userInfo.userService(CustomOauthUserDetail))
-                        .defaultSuccessUrl("/swagger-ui/index.html", true)
+                        .defaultSuccessUrl("https://resource-booking-app-frontend.onrender.com/dashboard", true)
                 )
 
                 .addFilterBefore(jwtFilter , UsernamePasswordAuthenticationFilter.class)
@@ -74,8 +74,10 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
-                "https://resource-booking-app-frontend.onrender.com/",
+                "https://resource-booking-app-frontend.onrender.com",
                 "http://localhost:8081"
+
+
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
