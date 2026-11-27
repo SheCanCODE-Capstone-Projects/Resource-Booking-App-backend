@@ -14,9 +14,12 @@ import org.example.resourcebookingappbackend.Service.Authentication.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -96,6 +99,18 @@ public class AuthController {
             throws IOException {
 
         response.sendRedirect("/oauth2/authorization/google");
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal OidcUser oidcUser) {
+
+        Map<String, Object> user = new HashMap<>();
+
+        user.put("email", oidcUser.getEmail());
+        user.put("name", oidcUser.getFullName());
+        user.put("picture", oidcUser.getPicture());
+
+        return ResponseEntity.ok(user);
     }
 
 
