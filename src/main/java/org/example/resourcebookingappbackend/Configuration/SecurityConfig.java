@@ -56,6 +56,7 @@ public class SecurityConfig {
                         .userInfoEndpoint(userInfo-> userInfo.userService(CustomOauthUserDetail))
                         .defaultSuccessUrl("/swagger-ui/index.html", true)
                 )
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 .addFilterBefore(jwtFilter , UsernamePasswordAuthenticationFilter.class)
                 .build();
@@ -74,7 +75,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
-                "https://resource-booking-app-frontend.onrender.com/",
+                "https://resource-booking-app-frontend.onrender.com",
                 "http://localhost:8081"
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
