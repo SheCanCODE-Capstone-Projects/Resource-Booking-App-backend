@@ -52,7 +52,19 @@ public class AdminSeeder implements CommandLineRunner {
                 .emailVerified(true)
                 .build();
 
+
+        Account user = Account.builder()
+                .userName("abc@gmail.com")
+                .fullName("John Doe")
+                .password(passwordEncoder.encode("Abcdefgh1@"))
+                .role(Role.USER)
+                .authProvider("LOCAL")
+                .emailVerified(true)
+                .build();
+
+
         accountRepository.save(admin);
+        accountRepository.save(user);
 
         log.info("Seeded administrator account: {}", adminUsername);
     }
